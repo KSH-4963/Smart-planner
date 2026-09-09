@@ -56,6 +56,10 @@
     .timer-circle-wrap { display: flex; justify-content: center; margin: 25px 0; }
     .timer-circle { width: 220px; height: 220px; border-radius: 50%; border: 10px solid #F1F5F9; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: #FFFFFF; transition: all 0.5s; }
     .timer-circle.active { border-color: #34D399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.2); }
+    
+    /* 🌟 알람 울릴 때의 타이머 붉은색 강조 효과 */
+    .timer-circle.alarm-ringing-circle { border-color: #E11D48; box-shadow: 0 0 30px rgba(225, 29, 72, 0.4); }
+    
     .time-display { font-size: 56px; font-weight: bold; letter-spacing: -2px; line-height: 1; margin-bottom: 8px; color: #1E293B; transition: color 0.5s; }
     .timer-status { font-size: 15px; color: var(--text-muted); font-weight: 500; transition: color 0.5s; }
     
@@ -70,8 +74,13 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
     .timer-controls { display: flex; justify-content: center; gap: 10px; }
-    .btn-main { background: #4F46E5; color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); }
+    .btn-main { background: #4F46E5; color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); transition: all 0.3s; }
     .btn-main:hover { background: #4338CA; }
+    
+    /* 🌟 알람 울릴 때 깜빡이는 붉은색 버튼 스타일 */
+    .btn-main.alarm-ringing { background: #E11D48 !important; box-shadow: 0 4px 15px rgba(225, 29, 72, 0.4) !important; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+    
     .btn-sub { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; padding: 14px 18px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; }
     body.deep-focus .btn-sub { background: #064E3B; color: #34D399; border-color: #065F46; }
     
@@ -96,9 +105,9 @@
     .todo-input-row input[type="text"] { flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; }
     .todo-input-row select { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: white; font-size: 15px; }
     
-    .time-input-wrap { display: flex; align-items: center; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; }
-    .time-input-wrap input { border: none; width: 45px; font-size: 15px; text-align: center; outline: none; background: transparent; padding: 12px 0; font-weight: bold; color: var(--primary); }
-    .time-input-wrap span { color: var(--text-muted); font-weight: bold; font-size: 14px; margin-left: 4px; }
+    .time-input-wrap { display: flex; align-items: center; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; }
+    .time-input-wrap input { border: none; width: 35px; font-size: 15px; text-align: center; outline: none; background: transparent; padding: 12px 0; font-weight: bold; color: var(--primary); }
+    .time-input-wrap span { color: var(--text-muted); font-weight: bold; font-size: 14px; margin-right: 8px; }
     .time-input-wrap input[type="number"]::-webkit-inner-spin-button, .time-input-wrap input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .time-input-wrap input[type="number"] { -moz-appearance: textfield; }
     
@@ -134,15 +143,13 @@
 <body>
 
 <audio id="bgmPlayer" loop preload="auto"></audio>
-<audio id="alarmPlayer" src="https://ia801402.us.archive.org/16/items/beeps_202004/beeps.mp3" preload="auto"></audio>
+<audio id="alarmPlayer" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
 <div class="container" id="mainApp">
   <div class="header dimmable">
     <div class="header-title">🎓 스마트 학습 플래너</div>
     <div class="header-controls">
-      <!-- 🌟 데이터 다운로드 버튼 추가 -->
       <button class="icon-btn btn-download" onclick="exportDataToCSV()" title="학습 기록을 엑셀(CSV) 파일로 저장합니다">📥 기록 다운로드</button>
-      
       <button class="icon-btn active" onclick="toggleWakeLock()" id="wakeLockBtn" title="공부 중 화면이 꺼지지 않게 유지합니다">💡 화면유지</button>
       
       <div class="volume-control">
@@ -174,15 +181,15 @@
       </div>
       
       <div class="time-adjust">
-        <button onclick="adjustTime(-5)">-5분</button>
-        <button onclick="adjustTime(5)">+5분</button>
-        <button onclick="adjustTime(10)">+10분</button>
+        <button onclick="adjustTime(-10)">-10초</button>
+        <button onclick="adjustTime(10)">+10초</button>
+        <button onclick="adjustTime(60)">+1분</button>
       </div>
 
       <div class="bgm-control" id="bgmControl">
         <label>
           <input type="checkbox" id="bgmToggle"> 
-          🎵 힐링 백색소음 켜기
+          🎵 휴식용 클래식 명곡 켜기
         </label>
         <button class="btn-preview" id="previewBtn" onclick="testBGM()">미리듣기</button>
       </div>
@@ -238,10 +245,12 @@
         <option value="취미">개인/취미</option>
         <option value="휴식">휴식/수면</option>
       </select>
+      
       <div class="time-input-wrap">
-        <input type="number" id="timeInput" min="1" max="300" value="25" placeholder="25">
-        <span>분</span>
+        <input type="number" id="timeInputMin" min="0" max="300" value="25" placeholder="0"><span>분</span>
+        <input type="number" id="timeInputSec" min="0" max="59" value="0" placeholder="0"><span>초</span>
       </div>
+      
       <button class="btn-add" onclick="addTask()">+ 등록하기</button>
     </div>
     
@@ -271,21 +280,25 @@
   let alarmVolume = 1.0;
   let previousVolume = 100;
   
+  // 🌟 심신 안정에 좋은 오픈소스 클래식 음악 (쇼팽, 드뷔시, 에릭사티)
   const bgmUrls = [
-    'https://ia800609.us.archive.org/20/items/15-minutes-of-rain/15%20Minutes%20of%20Rain.mp3',
-    'https://ia802507.us.archive.org/32/items/ocean-waves-crashing-on-beach-2-minutes/Ocean%20Waves%20Crashing%20On%20Beach%20%282%20Minutes%29.mp3',
-    'https://ia800108.us.archive.org/30/items/ForestBirds_79/ForestBirds.mp3'
+    'https://ia800501.us.archive.org/28/items/ChopinNocturneInEFlatMajorOp.9No.2/ChopinNocturneInEFlatMajorOp.9No.2.mp3', // 쇼팽 녹턴
+    'https://ia802306.us.archive.org/16/items/clair-de-lune-debussy/Clair%20de%20lune%20-%20Debussy.mp3', // 드뷔시 달빛
+    'https://ia800204.us.archive.org/11/items/GymnopedieNo.1/GymnopedieNo.1.mp3' // 에릭 사티 짐노페디
   ];
 
   function unlockAudio() {
     if (isAudioUnlocked) return;
     const alarmPlayer = document.getElementById('alarmPlayer');
     alarmPlayer.volume = 0; 
-    alarmPlayer.play().then(() => {
-        alarmPlayer.pause();
-        alarmPlayer.currentTime = 0;
-        alarmPlayer.volume = alarmVolume; 
-    }).catch(() => {});
+    let p = alarmPlayer.play();
+    if(p !== undefined) {
+      p.then(() => {
+          alarmPlayer.pause();
+          alarmPlayer.currentTime = 0;
+          alarmPlayer.volume = alarmVolume; 
+      }).catch(() => {});
+    }
     
     isAudioUnlocked = true;
     document.removeEventListener('click', unlockAudio);
@@ -305,11 +318,11 @@
   ];
 
   const recommendations = [
-    { title: "수학 고난도 3문제 꼼꼼히 풀기", time: "45" },
-    { title: "인터넷 강의 복습 및 핵심 개념 백지복습", time: "45" },
-    { title: "영어 단어 30개 집중 암기 테스트", time: "25" },
-    { title: "스마트폰 멀리 두고 눈 감고 명상하기", time: "15" },
-    { title: "하루를 돌아보며 플래너 피드백 작성", time: "10" }
+    { title: "수학 고난도 3문제 꼼꼼히 풀기", min: 45, sec: 0 },
+    { title: "인터넷 강의 복습 및 핵심 개념 백지복습", min: 45, sec: 0 },
+    { title: "영어 단어 30개 집중 암기 테스트", min: 25, sec: 0 },
+    { title: "스마트폰 멀리 두고 눈 감고 명상하기", min: 15, sec: 0 },
+    { title: "하루를 돌아보며 플래너 피드백 작성", min: 10, sec: 0 }
   ];
 
   window.onload = function() {
@@ -324,26 +337,20 @@
     updateTaskSelector();
   }
 
-  // 🌟 CSV(엑셀) 데이터 다운로드 기능 (깃허브 정적 웹사이트용 DB 대체제)
   function exportDataToCSV() {
     if (tasks.length === 0) {
       alert("다운로드할 학습 기록이 없습니다.");
       return;
     }
     
-    // BOM(Byte Order Mark) 추가하여 엑셀에서 한글 깨짐 방지
     let csvContent = "\uFEFF"; 
-    csvContent += "등록일자,카테고리,학습 내용,목표 시간(분),진행 시간(분),달성 상태\n";
+    csvContent += "등록일자,카테고리,학습 내용,목표 시간(초),진행 시간(초),달성 상태\n";
     
     tasks.forEach(t => {
       const date = new Date(parseInt(t.id)).toLocaleString('ko-KR');
-      const target = Math.floor(t.targetTime / 60);
-      const recorded = Math.floor(t.recordedTime / 60);
       const status = t.isCompleted ? "완료" : "미완료";
-      
-      // CSV 데이터 포맷팅 (콤마가 포함된 제목 처리)
       const title = `"${t.title.replace(/"/g, '""')}"`;
-      csvContent += `${date},${t.category},${title},${target},${recorded},${status}\n`;
+      csvContent += `${date},${t.category},${title},${t.targetTime},${t.recordedTime},${status}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -429,17 +436,20 @@
     if (!title) return alert("학습 내용을 입력해주세요.");
     
     const category = document.getElementById('categoryInput').value;
-    const targetMin = parseInt(document.getElementById('timeInput').value);
     
-    if (isNaN(targetMin) || targetMin < 1) {
-      return alert("학습 시간은 1분 이상으로 입력해주세요.");
+    const minVal = parseInt(document.getElementById('timeInputMin').value) || 0;
+    const secVal = parseInt(document.getElementById('timeInputSec').value) || 0;
+    const targetSec = (minVal * 60) + secVal;
+    
+    if (targetSec < 1) {
+      return alert("학습 시간은 1초 이상으로 설정해주세요.");
     }
     
     const newTask = {
       id: Date.now().toString(),
       title: title,
       category: category,
-      targetTime: targetMin * 60,
+      targetTime: targetSec,
       recordedTime: 0,
       isCompleted: false
     };
@@ -486,8 +496,14 @@
     
     tasks.forEach(task => {
       const progressPercent = Math.min(100, Math.round((task.recordedTime / task.targetTime) * 100));
+      
       const recordMin = Math.floor(task.recordedTime / 60);
+      const recordSec = task.recordedTime % 60;
+      const recordText = recordSec > 0 ? `${recordMin}분 ${recordSec}초` : `${recordMin}분`;
+      
       const targetMin = Math.floor(task.targetTime / 60);
+      const targetSec = task.targetTime % 60;
+      const targetText = targetSec > 0 ? `${targetMin}분 ${targetSec}초` : `${targetMin}분`;
       
       const li = document.createElement('li');
       li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
@@ -502,7 +518,7 @@
             <div>
               <span class="badge bg-${task.category}">${task.category}</span>
               <div class="task-title-text">${task.title}</div>
-              <div class="task-meta">진행: <b>${recordMin}분</b> / 목표: ${targetMin}분</div>
+              <div class="task-meta">진행: <b>${recordText}</b> / 목표: ${targetText}</div>
             </div>
           </div>
           <div class="task-actions">
@@ -527,7 +543,10 @@
     
     selector.innerHTML = '<option value="">학습 대상을 선택해주세요 (단순 타이머)</option>';
     tasks.filter(t => !t.isCompleted).forEach(task => {
-      selector.innerHTML += `<option value="${task.id}">${task.title} (${Math.floor(task.targetTime/60)}분)</option>`;
+      const targetMin = Math.floor(task.targetTime / 60);
+      const targetSec = task.targetTime % 60;
+      const targetText = targetSec > 0 ? `${targetMin}분 ${targetSec}초` : `${targetMin}분`;
+      selector.innerHTML += `<option value="${task.id}">${task.title} (${targetText})</option>`;
     });
     if(tasks.find(t => t.id === currentVal && !t.isCompleted)) { selector.value = currentVal; }
   }
@@ -588,6 +607,9 @@
   }
 
   function syncTimerWithTask() {
+    // 🌟 알람이 울리고 있는 상태라면 다른 작업을 하기 전 알람 먼저 중지
+    stopAlarmIfRinging();
+
     const selector = document.getElementById('timerTaskSelector');
     const bgmControl = document.getElementById('bgmControl');
     activeTaskId = selector.value;
@@ -614,9 +636,9 @@
     renderTasks();
   }
 
-  function adjustTime(minutes) {
+  function adjustTime(seconds) {
     if (isRunning) return;
-    timeLeft += minutes * 60;
+    timeLeft += seconds;
     if (timeLeft < 0) timeLeft = 0;
     updateTimerDisplay();
   }
@@ -657,7 +679,7 @@
           }
         }, 5000);
       }).catch(e => {
-        console.warn("미리듣기 차단:", e);
+        console.warn("BGM Play Error:", e);
         btn.innerText = "다시 시도";
       });
     }
@@ -671,6 +693,12 @@
   }
 
   function toggleTimer() {
+    // 알람이 울리는 중이면 먼저 끄기 처리
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn.classList.contains('alarm-ringing')) {
+        turnOffAlarm();
+        return;
+    }
     if (isRunning) { pauseTimer(); } else { startTimer(); }
   }
 
@@ -705,7 +733,7 @@
       
       let playPromise = player.play();
       if (playPromise !== undefined) {
-        playPromise.catch(e => console.warn("BGM 지연:", e));
+        playPromise.catch(e => console.warn("BGM Error:", e));
       }
     }
 
@@ -714,9 +742,9 @@
         timeLeft--;
         updateTimerDisplay();
         
-        if (activeTaskId && timeLeft % 60 === 0) {
+        if (activeTaskId) {
           const task = tasks.find(t => t.id === activeTaskId);
-          if (task) { task.recordedTime += 60; saveData(); updateStats(); renderTasks(); }
+          if (task) { task.recordedTime += 1; saveData(); updateStats(); }
         }
       } else {
         handleTimerEnd();
@@ -738,11 +766,13 @@
   }
 
   function resetTimer() {
+    stopAlarmIfRinging();
     pauseTimer();
     stopBGM();
     syncTimerWithTask();
   }
 
+  // 🌟 종료 시 무한 반복 알람 로직
   function handleTimerEnd() {
     pauseTimer(); 
     stopBGM(); 
@@ -751,22 +781,64 @@
       const alarmPlayer = document.getElementById('alarmPlayer');
       alarmPlayer.volume = alarmVolume;
       alarmPlayer.currentTime = 0;
+      alarmPlayer.loop = true; // 무한 반복 설정
+      
       let playPromise = alarmPlayer.play();
       if (playPromise !== undefined) {
-         playPromise.catch(e => console.warn("Alarm Error:", e));
+         playPromise.catch(e => console.warn("Alarm Play Error:", e));
       }
+      
+      // 알람 끄기 UI 상태로 전환
+      const startBtn = document.getElementById('startBtn');
+      startBtn.innerText = '🛑 알람 끄기';
+      startBtn.classList.add('alarm-ringing');
+      
+      document.getElementById('timerStatus').innerText = `🔔 시간이 다 되었습니다!`;
+      document.getElementById('timerCircle').classList.add('alarm-ringing-circle');
+    } else {
+      alert("시간이 종료되었습니다! 수고하셨습니다.");
     }
     
-    if (isVibeOn && "vibrate" in navigator) { navigator.vibrate([1000, 500, 1000, 500, 1000]); }
+    if (isVibeOn && "vibrate" in navigator) { 
+       navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]); 
+    }
+  }
+
+  // 🌟 알람 수동 종료 함수
+  function turnOffAlarm() {
+    const alarmPlayer = document.getElementById('alarmPlayer');
+    alarmPlayer.pause();
+    alarmPlayer.currentTime = 0;
+    alarmPlayer.loop = false;
     
-    let taskTitle = activeTaskId ? tasks.find(t => t.id === activeTaskId)?.title : "일반 집중";
-    let taskCategory = activeTaskId ? tasks.find(t => t.id === activeTaskId)?.category : "기타";
+    const startBtn = document.getElementById('startBtn');
+    startBtn.innerText = '▶ 집중 시작';
+    startBtn.classList.remove('alarm-ringing');
     
-    alert("시간이 종료되었습니다! 수고하셨습니다.");
+    document.getElementById('timerCircle').classList.remove('alarm-ringing-circle');
+    
+    alert("수고하셨습니다! 학습 기록이 저장되었습니다.");
+    syncTimerWithTask(); // 화면 복귀
+  }
+
+  // 알람이 울리고 있을 때 다른 버튼(초기화, 완료 등)을 누르면 먼저 알람을 끄는 보조 함수
+  function stopAlarmIfRinging() {
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn.classList.contains('alarm-ringing')) {
+        const alarmPlayer = document.getElementById('alarmPlayer');
+        alarmPlayer.pause();
+        alarmPlayer.currentTime = 0;
+        alarmPlayer.loop = false;
+        
+        startBtn.innerText = '▶ 집중 시작';
+        startBtn.classList.remove('alarm-ringing');
+        document.getElementById('timerCircle').classList.remove('alarm-ringing-circle');
+    }
   }
 
   function completeCurrentSession() {
     if (!activeTaskId) return alert("연결된 학습 내역이 없습니다.");
+    stopAlarmIfRinging(); // 알람 울리는 중이면 알람 먼저 끄기
     pauseTimer();
     toggleTaskComplete(activeTaskId);
     activeTaskId = null;
@@ -776,6 +848,7 @@
 
   function resetAllData() {
     if(confirm("모든 학습 데이터가 지워집니다. 계속하시겠습니까?")) {
+      stopAlarmIfRinging();
       pauseTimer();
       tasks = [];
       saveData();
@@ -795,7 +868,8 @@
       const randomRec = recommendations[Math.floor(Math.random() * recommendations.length)];
       
       document.getElementById('taskInput').value = randomRec.title;
-      document.getElementById('timeInput').value = randomRec.time;
+      document.getElementById('timeInputMin').value = randomRec.min;
+      document.getElementById('timeInputSec').value = randomRec.sec;
       document.getElementById('categoryInput').value = "자습";
       
       const inputEl = document.getElementById('taskInput');
