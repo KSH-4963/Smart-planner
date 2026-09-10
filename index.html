@@ -203,8 +203,13 @@
       <div class="bgm-control" id="bgmControl">
         <label>
           <input type="checkbox" id="bgmToggle"> 
-          🎻 클래식 음악 켜기
+          🎧 배경음 켜기
         </label>
+        <select id="bgmTypeSelect" style="margin-left:10px; padding:5px 8px; border-radius:6px; border:1px solid #FDE68A; background:white; color:#92400E; font-weight:bold; font-size:13px;">
+          <option value="classical">🎻 클래식 음악</option>
+          <option value="rain">🌧️ 빗소리</option>
+          <option value="ocean">🌊 파도 소리</option>
+        </select>
         <button class="btn-preview" id="previewBtn" onclick="testBGM()">미리듣기</button>
       </div>
       
@@ -260,8 +265,12 @@
         <option value="휴식">휴식/수면</option>
       </select>
       <div class="time-input-wrap">
-        <input type="number" id="timeInput" min="1" max="300" value="25" placeholder="25">
+        <input type="number" id="timeInput" min="0" max="300" value="25" placeholder="25">
         <span>분</span>
+      </div>
+      <div class="time-input-wrap">
+        <input type="number" id="timeSecInput" min="0" max="59" value="0" placeholder="0">
+        <span>초</span>
       </div>
       <button class="btn-add" onclick="addTask()">+ 등록하기</button>
     </div>
@@ -456,9 +465,116 @@
     }
   }
 
-  // 재생 우선순위: 위키미디어 실제 클래식 녹음 -> 본인 저장소 mp3 -> 내장 신디사이저
+  // ---- 자연의 소리 (빗소리 / 파도 소리) ----
+  // 실제 녹음 파일 대신 노이즈에 필터와 파형 변조를 입혀 직접 합성합니다.
+  // 진짜 녹음만큼 디테일하진 않지만, 외부 링크가 아니라서 절대 깨지지 않고 항상 재생됩니다.
+  // 더 실감나는 녹음을 원하시면 pixabay.com/sound-effects 나 freesound.org에서
+  // 무료 자연음 mp3를 받아 본인 저장소의 audio/ 폴더에 넣고 classicalTracks처럼
+  // 경로를 등록해서 쓰는 걸 추천합니다.
+  let natureNoiseSource = null;
+  let natureFilter = null;
+  let natureGain = null;
+  let natureLfo = null;
+  let natureLfoGain = null;
+  let natureBaseGain = 0.25;
+  let natureBaseLfoGain = 0;
+  let rainDropletTimeout = null;
+
+  function createBrownNoiseBuffer(ctx, seconds) {
+    const bufferSize = Math.floor(ctx.sampleRate * seconds);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      lastOut = (lastOut + 0.02 * white) / 1.02;
+      data[i] = lastOut * 3.5;
+    }
+    return buffer;
+  }
+
+  function stopNatureSound() {
+    if (rainDropletTimeout) { clearTimeout(rainDropletTimeout); rainDropletTimeout = null; }
+    if (natureLfo) { try { natureLfo.stop(); } catch (e) {} natureLfo.disconnect(); natureLfo = null; }
+    if (natureLfoGain) { natureLfoGain.disconnect(); natureLfoGain = null; }
+    if (natureNoiseSource) { try { natureNoiseSource.stop(); } catch (e) {} natureNoiseSource.disconnect(); natureNoiseSource = null; }
+    if (natureFilter) { natureFilter.disconnect(); natureFilter = null; }
+    if (natureGain) { natureGain.disconnect(); natureGain = null; }
+  }
+
+  // 빗소리: 대역 필터를 통과한 노이즈(빗소리 배경) 위에, 무작위 간격으로
+  // 짧은 클릭음(빗방울)을 계속 얹어서 단조로운 노이즈보다 훨씬 자연스럽게 만듭니다.
+  function scheduleRainDroplets(ctx) {
+    if (!natureNoiseSource) return;
+    const osc = ctx.createOscillator();
+    const dropGain = ctx.createGain();
+    const startTime = ctx.currentTime + 0.01;
+    osc.type = 'triangle';
+    osc.frequency.value = 1200 + Math.random() * 900;
+    dropGain.gain.setValueAtTime(0.0001, startTime);
+    dropGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.07, 0.0002), startTime + 0.005);
+    dropGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.09);
+    osc.connect(dropGain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + 0.1);
+    const nextDelay = 70 + Math.random() * 230;
+    rainDropletTimeout = setTimeout(() => scheduleRainDroplets(ctx), nextDelay);
+  }
+
+  function startRainSound() {
+    stopBGM();
+    const ctx = getAudioContext();
+    natureNoiseSource = ctx.createBufferSource();
+    natureNoiseSource.buffer = createBrownNoiseBuffer(ctx, 4);
+    natureNoiseSource.loop = true;
+    natureFilter = ctx.createBiquadFilter();
+    natureFilter.type = 'bandpass';
+    natureFilter.frequency.value = 1800;
+    natureFilter.Q.value = 0.6;
+    natureBaseGain = 0.25;
+    natureBaseLfoGain = 0;
+    natureGain = ctx.createGain();
+    natureGain.gain.value = alarmVolume * natureBaseGain;
+    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(ctx.destination);
+    natureNoiseSource.start();
+    scheduleRainDroplets(ctx);
+  }
+
+  // 파도 소리: 저역 필터를 통과한 노이즈의 음량을 아주 느린 LFO로 오르내리게 해서
+  // 파도가 밀려왔다 빠지는 느낌을 냅니다.
+  function startOceanSound() {
+    stopBGM();
+    const ctx = getAudioContext();
+    natureNoiseSource = ctx.createBufferSource();
+    natureNoiseSource.buffer = createBrownNoiseBuffer(ctx, 6);
+    natureNoiseSource.loop = true;
+    natureFilter = ctx.createBiquadFilter();
+    natureFilter.type = 'lowpass';
+    natureFilter.frequency.value = 650;
+    natureBaseGain = 0.3;
+    natureBaseLfoGain = 0.18;
+    natureGain = ctx.createGain();
+    natureGain.gain.value = alarmVolume * natureBaseGain;
+    natureLfo = ctx.createOscillator();
+    natureLfo.frequency.value = 0.12;
+    natureLfoGain = ctx.createGain();
+    natureLfoGain.gain.value = alarmVolume * natureBaseLfoGain;
+    natureLfo.connect(natureLfoGain);
+    natureLfoGain.connect(natureGain.gain);
+    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(ctx.destination);
+    natureLfo.start();
+    natureNoiseSource.start();
+  }
+  // ---- 자연의 소리 끝 ----
+
+  // 재생 우선순위(클래식 선택 시): 위키미디어 실제 클래식 녹음 -> 본인 저장소 mp3 -> 내장 신디사이저
   function startBGM() {
     stopBGM();
+    const type = document.getElementById('bgmTypeSelect') ? document.getElementById('bgmTypeSelect').value : 'classical';
+
+    if (type === 'rain') { startRainSound(); return; }
+    if (type === 'ocean') { startOceanSound(); return; }
+
     bgmAudioEl = document.getElementById('bgmAudioPlayer');
     const combined = classicalStreamUrls.concat(classicalTracks);
     if (combined.length === 0) {
@@ -483,11 +599,12 @@
       bgmAudioEl.removeAttribute('src');
     }
     stopSynthClassical();
+    stopNatureSound();
   }
 
   function isBgmPlaying() {
     const localPlaying = bgmAudioEl && !bgmAudioEl.paused;
-    return !!localPlaying || synthLoopActive;
+    return !!localPlaying || synthLoopActive || !!natureNoiseSource;
   }
 
   function testBGM() {
@@ -545,12 +662,12 @@
     }
     
     let csvContent = "\uFEFF"; 
-    csvContent += "등록일자,카테고리,학습 내용,목표 시간(분),진행 시간(분),달성 상태\n";
+    csvContent += "등록일자,카테고리,학습 내용,목표 시간(초),진행 시간(초),달성 상태\n";
     
     tasks.forEach(t => {
       const date = new Date(parseInt(t.id)).toLocaleString('ko-KR');
-      const target = Math.floor(t.targetTime / 60);
-      const recorded = Math.floor(t.recordedTime / 60);
+      const target = t.targetTime;
+      const recorded = t.recordedTime;
       const status = t.isCompleted ? "완료" : "미완료";
       
       const title = `"${t.title.replace(/"/g, '""')}"`;
@@ -611,6 +728,12 @@
     if (bgmAudioEl) {
       bgmAudioEl.volume = alarmVolume * 0.5;
     }
+    if (natureGain) {
+      natureGain.gain.value = alarmVolume * natureBaseGain;
+    }
+    if (natureLfoGain) {
+      natureLfoGain.gain.value = alarmVolume * natureBaseLfoGain;
+    }
   }
 
   function toggleMute() {
@@ -636,17 +759,19 @@
     if (!title) return alert("학습 내용을 입력해주세요.");
     
     const category = document.getElementById('categoryInput').value;
-    const targetMin = parseInt(document.getElementById('timeInput').value);
+    const targetMin = parseInt(document.getElementById('timeInput').value) || 0;
+    const targetSec = parseInt(document.getElementById('timeSecInput').value) || 0;
+    const totalSeconds = targetMin * 60 + targetSec;
     
-    if (isNaN(targetMin) || targetMin < 1) {
-      return alert("학습 시간은 1분 이상으로 입력해주세요.");
+    if (isNaN(totalSeconds) || totalSeconds < 1) {
+      return alert("학습 시간은 1초 이상으로 입력해주세요.");
     }
     
     const newTask = {
       id: Date.now().toString(),
       title: title,
       category: category,
-      targetTime: targetMin * 60,
+      targetTime: totalSeconds,
       recordedTime: 0,
       isCompleted: false
     };
@@ -687,14 +812,21 @@
     }
   }
 
+  // 초 단위까지 표시하기 위한 시간 포맷 함수 (예: 90초 -> "1분 30초", 40초 -> "40초")
+  function formatTime(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = Math.floor(totalSeconds % 60);
+    if (m > 0 && s > 0) return `${m}분 ${s}초`;
+    if (m > 0) return `${m}분`;
+    return `${s}초`;
+  }
+
   function renderTasks() {
     const list = document.getElementById('taskList');
     list.innerHTML = '';
     
     tasks.forEach(task => {
       const progressPercent = Math.min(100, Math.round((task.recordedTime / task.targetTime) * 100));
-      const recordMin = Math.floor(task.recordedTime / 60);
-      const targetMin = Math.floor(task.targetTime / 60);
       
       const li = document.createElement('li');
       li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
@@ -709,7 +841,7 @@
             <div>
               <span class="badge bg-${task.category}">${task.category}</span>
               <div class="task-title-text">${task.title}</div>
-              <div class="task-meta">진행: <b>${recordMin}분</b> / 목표: ${targetMin}분</div>
+              <div class="task-meta">진행: <b>${formatTime(task.recordedTime)}</b> / 목표: ${formatTime(task.targetTime)}</div>
             </div>
           </div>
           <div class="task-actions">
@@ -734,10 +866,11 @@
     
     selector.innerHTML = '<option value="">학습 대상을 선택해주세요 (단순 타이머)</option>';
     tasks.filter(t => !t.isCompleted).forEach(task => {
-      selector.innerHTML += `<option value="${task.id}">${task.title} (${Math.floor(task.targetTime/60)}분)</option>`;
+      selector.innerHTML += `<option value="${task.id}">${task.title} (${formatTime(task.targetTime)})</option>`;
     });
     if(tasks.find(t => t.id === currentVal && !t.isCompleted)) { selector.value = currentVal; }
   }
+
 
   function updateStats() {
     let totalRecordSec = 0;
@@ -941,6 +1074,7 @@
       
       document.getElementById('taskInput').value = randomRec.title;
       document.getElementById('timeInput').value = randomRec.time;
+      document.getElementById('timeSecInput').value = 0;
       document.getElementById('categoryInput').value = "자습";
       
       const inputEl = document.getElementById('taskInput');
