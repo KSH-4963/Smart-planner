@@ -145,7 +145,6 @@
 <body>
 
 <audio id="bgmAudioPlayer" loop preload="none"></audio>
-<div id="ytPlayerContainer" style="position:absolute; width:0; height:0; overflow:hidden;"></div>
 
 <div class="alarm-modal" id="alarmModal">
   <div class="alarm-icon">⏰</div>
@@ -293,25 +292,24 @@
   let previousVolume = 100;
 
   // ===== 소리 엔진 =====
-  // 이전 버전은 archive.org에 직접 링크된 mp3 파일을 재생했는데,
-  // 그 파일들이 삭제/이동되어 404가 떠서 알람과 배경음악이 전혀 나오지 않았습니다.
+  // v1: archive.org 직접 mp3 링크 -> 파일이 삭제되어 404로 소리 전혀 안 남
+  // v2: 유튜브 IFrame API로 실제 클래식 영상 재생 -> 임베드 제한/스크립트 로딩 타이밍 등
+  //     디버그하기 어려운 실패 지점이 많아 실제로 소리가 안 나는 문제가 있었습니다.
+  // v3(현재): 위키미디어 커먼즈(Wikimedia Commons)의 Special:FilePath 링크를 사용합니다.
+  //     이 방식은 위키미디어가 공식적으로 제공하는 "항상 같은 주소를 유지하는" 외부
+  //     연동용 링크라서, 저장 위치가 바뀌어도 주소 자체는 깨지지 않습니다. 실제
+  //     피아니스트가 연주한 퍼블릭 도메인 클래식 음원(오디오 파일 하나)을 곧바로
+  //     <audio> 태그로 재생하기 때문에 유튜브보다 실패 지점이 훨씬 적습니다.
   //
-  // "정말 쉴 때 들을만한 클래식"을 인터넷에서 가져오기 위해, 이번에는
-  // YouTube IFrame Player API로 실제 클래식 연주 영상(화면은 숨기고 소리만 재생)을
-  // 스트리밍합니다. mp3 파일 하나를 직접 링크하는 것보다 훨씬 안정적입니다:
-  // 구글이 운영하는 인프라라 파일이 갑자기 삭제될 위험이 거의 없고, 실제
-  // 관현악단/피아니스트가 연주한 정식 클래식 음원을 들을 수 있습니다.
-  //
-  // 혹시 유튜브 로딩이 실패하는 환경(네트워크 차단 등)이라면:
-  //  1) classicalTracks 배열에 본인 저장소에 직접 올린 mp3 경로가 있으면 그걸 재생하고
-  //  2) 그것도 없으면 내장 신디사이저가 바흐 프렐류드를 직접 연주해 대체합니다.
-  // 즉 인터넷이 막혀도 소리가 전혀 안 나오는 상황은 없습니다.
-  const classicalYoutubeIds = [
-    '9PCDPzs234E', // HALIDONMUSIC - Classical Music for Sleeping
-    'ElWSdcg67RY', // HALIDONMUSIC - Peaceful Classical Music (stress relief)
-    'aepIEsxlaXc'  // HALIDONMUSIC - Classical Music for Reading
+  //     혹시 학교 네트워크가 위키미디어를 막아둔 경우라면:
+  //      1) classicalTracks 배열에 본인 저장소에 직접 올린 mp3 경로가 있으면 그걸 재생하고
+  //      2) 그것도 없으면 내장 신디사이저가 바흐 프렐류드를 직접 연주해 대체합니다.
+  //     즉 인터넷이 막혀도 소리가 전혀 안 나오는 상황은 없습니다.
+  const classicalStreamUrls = [
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Clair%20de%20Lune%20by%20Claude%20Debussy%20(1905,%20piano%20solo).opus',
+    'https://commons.wikimedia.org/wiki/Special:FilePath/Edvard%20Grieg%20-%20piano%20concerto%20in%20a%20minor,%20op.%2016%20-%20ii.%20adagio.ogg'
   ];
-  // 본인 저장소의 audio/ 폴더에 직접 올린 mp3가 있다면 여기에 경로를 추가하세요.
+  // 본인 저장소의 audio/ 폴더에 직접 올린 mp3가 있다면 여기에 경로를 추가하세요 (가장 확실한 방법).
   // 예: 'audio/classical-1.mp3'
   const classicalTracks = [];
 
@@ -321,11 +319,6 @@
   let synthLoopActive = false;
   let synthLoopTimeout = null;
   let alarmRepeatInterval = null;
-
-  let ytPlayer = null;
-  let ytApiLoadAttempted = false;
-  let ytApiReady = false;
-  let ytApiFailed = false;
 
   function getAudioContext() {
     if (!audioCtx) {
@@ -345,7 +338,6 @@
     } catch (e) {
       console.warn('오디오 초기화 실패:', e);
     }
-    loadYoutubeApi();
     document.removeEventListener('click', unlockAudio);
     document.removeEventListener('touchstart', unlockAudio);
   }
@@ -353,53 +345,39 @@
   document.addEventListener('click', unlockAudio, { once: true });
   document.addEventListener('touchstart', unlockAudio, { once: true });
 
-  // YouTube IFrame API를 미리 로드해둠 (실제로 재생 버튼을 누를 때는 이미 준비돼 있도록)
-  function loadYoutubeApi() {
-    if (ytApiLoadAttempted) return;
-    ytApiLoadAttempted = true;
-    try {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      tag.onerror = () => { ytApiFailed = true; };
-      document.head.appendChild(tag);
-    } catch (e) {
-      ytApiFailed = true;
-    }
+  // 알람을 부드러운 차임벨 소리로 변경: G5 -> E5 -> C5로 천천히 내려오는 3음 차임을
+  // 배음(overtone)을 살짝 섞고 길게 여운을 남기며 재생합니다. (아래 alarm 모달에서 반복 호출)
+  function playChimeNote(ctx, freq, startTime, volumeScale) {
+    const fundamental = ctx.createOscillator();
+    const fundGain = ctx.createGain();
+    fundamental.type = 'sine';
+    fundamental.frequency.value = freq;
+    fundGain.gain.setValueAtTime(0.0001, startTime);
+    fundGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * volumeScale, 0.0002), startTime + 0.06);
+    fundGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.4);
+    fundamental.connect(fundGain).connect(ctx.destination);
+    fundamental.start(startTime);
+    fundamental.stop(startTime + 1.5);
+
+    const overtone = ctx.createOscillator();
+    const overGain = ctx.createGain();
+    overtone.type = 'sine';
+    overtone.frequency.value = freq * 2;
+    overGain.gain.setValueAtTime(0.0001, startTime);
+    overGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * volumeScale * 0.25, 0.0001), startTime + 0.06);
+    overGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.8);
+    overtone.connect(overGain).connect(ctx.destination);
+    overtone.start(startTime);
+    overtone.stop(startTime + 0.9);
   }
 
-  window.onYouTubeIframeAPIReady = function () {
-    try {
-      ytPlayer = new YT.Player('ytPlayerContainer', {
-        height: '0',
-        width: '0',
-        playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1 },
-        events: {
-          'onReady': () => { ytApiReady = true; },
-          'onError': () => { startFallbackBGM(); }
-        }
-      });
-    } catch (e) {
-      ytApiFailed = true;
-    }
-  };
-
-  // 알람: 짧은 비프음 6타를 한 번 울림 (아래 alarm 모달에서 반복 호출)
   function playAlarmSound() {
     if (alarmVolume <= 0) return;
     const ctx = getAudioContext();
-    const beepTimes = [0, 0.5, 1.0, 1.5, 2.0, 2.5];
-    beepTimes.forEach(t => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      const startTime = ctx.currentTime + t;
-      gain.gain.setValueAtTime(0.0001, startTime);
-      gain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.35, 0.0002), startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + 0.4);
+    const now = ctx.currentTime;
+    const chimeFreqs = [783.99, 659.25, 523.25]; // G5 - E5 - C5, 부드럽게 내려오는 차임
+    chimeFreqs.forEach((freq, i) => {
+      playChimeNote(ctx, freq, now + i * 0.35, 0.22);
     });
   }
 
@@ -407,11 +385,11 @@
   function showAlarmModal() {
     document.getElementById('alarmModal').classList.add('show');
     playAlarmSound();
-    if (isVibeOn && "vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
+    if (isVibeOn && "vibrate" in navigator) navigator.vibrate([600, 300, 600]);
     alarmRepeatInterval = setInterval(() => {
       playAlarmSound();
-      if (isVibeOn && "vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
-    }, 3000);
+      if (isVibeOn && "vibrate" in navigator) navigator.vibrate([600, 300, 600]);
+    }, 3500);
   }
 
   function stopAlarm() {
@@ -478,56 +456,27 @@
     }
   }
 
-  // 로컬 mp3(있는 경우) 또는 신디사이저로 대체 재생
-  function startFallbackBGM() {
-    if (classicalTracks.length > 0) {
-      bgmAudioEl = document.getElementById('bgmAudioPlayer');
-      const track = classicalTracks[Math.floor(Math.random() * classicalTracks.length)];
-      bgmAudioEl.loop = true;
-      bgmAudioEl.volume = alarmVolume * 0.5;
-      bgmAudioEl.onerror = () => { startSynthClassical(); };
-      bgmAudioEl.src = track;
-      const playPromise = bgmAudioEl.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => { startSynthClassical(); });
-      }
-    } else {
-      startSynthClassical();
-    }
-  }
-
+  // 재생 우선순위: 위키미디어 실제 클래식 녹음 -> 본인 저장소 mp3 -> 내장 신디사이저
   function startBGM() {
     stopBGM();
-    if (ytApiFailed) {
-      startFallbackBGM();
+    bgmAudioEl = document.getElementById('bgmAudioPlayer');
+    const combined = classicalStreamUrls.concat(classicalTracks);
+    if (combined.length === 0) {
+      startSynthClassical();
       return;
     }
-    loadYoutubeApi();
-    if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-      const videoId = classicalYoutubeIds[Math.floor(Math.random() * classicalYoutubeIds.length)];
-      try {
-        ytPlayer.setVolume(Math.round(alarmVolume * 60));
-        ytPlayer.loadVideoById(videoId);
-      } catch (e) {
-        startFallbackBGM();
-      }
-    } else {
-      // 유튜브 API가 아직 준비 중이면 잠시 기다렸다가 다시 시도, 그래도 안 되면 대체 재생
-      setTimeout(() => {
-        if (!isRunning) return; // 그 사이 정지했으면 재생하지 않음
-        if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-          startBGM();
-        } else {
-          startFallbackBGM();
-        }
-      }, 1500);
+    const track = combined[Math.floor(Math.random() * combined.length)];
+    bgmAudioEl.loop = true;
+    bgmAudioEl.volume = alarmVolume * 0.5;
+    bgmAudioEl.onerror = () => { startSynthClassical(); };
+    bgmAudioEl.src = track;
+    const playPromise = bgmAudioEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => { startSynthClassical(); });
     }
   }
 
   function stopBGM() {
-    if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-      try { ytPlayer.pauseVideo(); } catch (e) {}
-    }
     if (bgmAudioEl) {
       bgmAudioEl.pause();
       bgmAudioEl.onerror = null;
@@ -537,9 +486,8 @@
   }
 
   function isBgmPlaying() {
-    const ytPlaying = ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === 1;
     const localPlaying = bgmAudioEl && !bgmAudioEl.paused;
-    return !!ytPlaying || !!localPlaying || synthLoopActive;
+    return !!localPlaying || synthLoopActive;
   }
 
   function testBGM() {
@@ -662,9 +610,6 @@
     
     if (bgmAudioEl) {
       bgmAudioEl.volume = alarmVolume * 0.5;
-    }
-    if (ytPlayer && typeof ytPlayer.setVolume === 'function') {
-      try { ytPlayer.setVolume(Math.round(alarmVolume * 60)); } catch (e) {}
     }
   }
 
@@ -865,11 +810,17 @@
         document.getElementById('timerStatus').innerText = `☕ 달콤한 휴식 중`;
       } else {
         bgmControl.style.display = 'none';
+        const bgmToggleEl = document.getElementById('bgmToggle');
+        if (bgmToggleEl.checked) { bgmToggleEl.checked = false; }
+        stopBGM();
       }
     } else {
       timeLeft = 25 * 60;
       document.getElementById('timerStatus').innerText = `🔥 집중 모드 (자유)`;
       bgmControl.style.display = 'none';
+      const bgmToggleEl = document.getElementById('bgmToggle');
+      if (bgmToggleEl.checked) { bgmToggleEl.checked = false; }
+      stopBGM();
     }
     
     if(!isRunning) updateTimerDisplay();
