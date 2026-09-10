@@ -56,15 +56,13 @@
     .timer-circle-wrap { display: flex; justify-content: center; margin: 25px 0; }
     .timer-circle { width: 220px; height: 220px; border-radius: 50%; border: 10px solid #F1F5F9; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: #FFFFFF; transition: all 0.5s; }
     .timer-circle.active { border-color: #34D399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.2); }
-    
-    /* 🌟 알람 울릴 때의 타이머 붉은색 강조 효과 */
-    .timer-circle.alarm-ringing-circle { border-color: #E11D48; box-shadow: 0 0 30px rgba(225, 29, 72, 0.4); }
-    
     .time-display { font-size: 56px; font-weight: bold; letter-spacing: -2px; line-height: 1; margin-bottom: 8px; color: #1E293B; transition: color 0.5s; }
     .timer-status { font-size: 15px; color: var(--text-muted); font-weight: 500; transition: color 0.5s; }
     
-    .time-adjust { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-    .time-adjust button { background: rgba(148, 163, 184, 0.1); border: none; padding: 8px 14px; border-radius: 20px; font-size: 14px; cursor: pointer; color: inherit; font-weight: 500; }
+    .time-adjust { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+    .time-adjust button { background: rgba(148, 163, 184, 0.1); border: none; padding: 8px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; color: inherit; font-weight: 500; }
+    .time-adjust .sec-group button { background: rgba(79, 70, 229, 0.1); color: #4338CA; }
+    body.deep-focus .time-adjust .sec-group button { background: rgba(129, 140, 248, 0.2); color: #C7D2FE; }
     
     .bgm-control { display: none; justify-content: center; align-items: center; margin-bottom: 20px; background: rgba(253, 230, 138, 0.2); border: 1px solid #FDE68A; padding: 12px; border-radius: 8px; font-size: 14px; color: #D97706; animation: fadeIn 0.3s ease-in-out; }
     .bgm-control label { cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; }
@@ -74,13 +72,8 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
     .timer-controls { display: flex; justify-content: center; gap: 10px; }
-    .btn-main { background: #4F46E5; color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); transition: all 0.3s; }
+    .btn-main { background: #4F46E5; color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); }
     .btn-main:hover { background: #4338CA; }
-    
-    /* 🌟 알람 울릴 때 깜빡이는 붉은색 버튼 스타일 */
-    .btn-main.alarm-ringing { background: #E11D48 !important; box-shadow: 0 4px 15px rgba(225, 29, 72, 0.4) !important; animation: pulse 1s infinite; }
-    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-    
     .btn-sub { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; padding: 14px 18px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; }
     body.deep-focus .btn-sub { background: #064E3B; color: #34D399; border-color: #065F46; }
     
@@ -105,9 +98,9 @@
     .todo-input-row input[type="text"] { flex: 1; min-width: 150px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; }
     .todo-input-row select { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: white; font-size: 15px; }
     
-    .time-input-wrap { display: flex; align-items: center; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; }
-    .time-input-wrap input { border: none; width: 35px; font-size: 15px; text-align: center; outline: none; background: transparent; padding: 12px 0; font-weight: bold; color: var(--primary); }
-    .time-input-wrap span { color: var(--text-muted); font-weight: bold; font-size: 14px; margin-right: 8px; }
+    .time-input-wrap { display: flex; align-items: center; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; }
+    .time-input-wrap input { border: none; width: 45px; font-size: 15px; text-align: center; outline: none; background: transparent; padding: 12px 0; font-weight: bold; color: var(--primary); }
+    .time-input-wrap span { color: var(--text-muted); font-weight: bold; font-size: 14px; margin-left: 4px; }
     .time-input-wrap input[type="number"]::-webkit-inner-spin-button, .time-input-wrap input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .time-input-wrap input[type="number"] { -moz-appearance: textfield; }
     
@@ -138,18 +131,35 @@
     
     .progress-bg { width: 100%; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin-top: 6px; z-index: 2; }
     .progress-bar { height: 100%; transition: width 0.3s; }
+
+    .alarm-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.88); z-index: 999; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; }
+    .alarm-modal.show { display: flex; }
+    .alarm-icon { font-size: 60px; margin-bottom: 10px; animation: ring 1s infinite; }
+    @keyframes ring { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }
+    .alarm-title { font-size: 22px; font-weight: bold; margin-bottom: 8px; }
+    .alarm-desc { font-size: 15px; color: #CBD5E1; margin-bottom: 24px; }
+    .btn-stop-alarm { background: #EF4444; color: white; border: none; padding: 16px 36px; border-radius: 12px; font-size: 17px; font-weight: bold; cursor: pointer; }
+    .btn-stop-alarm:hover { background: #DC2626; }
   </style>
 </head>
 <body>
 
-<audio id="bgmPlayer" loop preload="auto"></audio>
-<audio id="alarmPlayer" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<audio id="bgmAudioPlayer" loop preload="none"></audio>
+<div id="ytPlayerContainer" style="position:absolute; width:0; height:0; overflow:hidden;"></div>
+
+<div class="alarm-modal" id="alarmModal">
+  <div class="alarm-icon">⏰</div>
+  <div class="alarm-title">시간이 종료되었습니다!</div>
+  <div class="alarm-desc">수고하셨습니다. 알람을 끄려면 아래 버튼을 눌러주세요.</div>
+  <button class="btn-stop-alarm" onclick="stopAlarm()">🔕 알람 종료</button>
+</div>
 
 <div class="container" id="mainApp">
   <div class="header dimmable">
     <div class="header-title">🎓 스마트 학습 플래너</div>
     <div class="header-controls">
       <button class="icon-btn btn-download" onclick="exportDataToCSV()" title="학습 기록을 엑셀(CSV) 파일로 저장합니다">📥 기록 다운로드</button>
+      
       <button class="icon-btn active" onclick="toggleWakeLock()" id="wakeLockBtn" title="공부 중 화면이 꺼지지 않게 유지합니다">💡 화면유지</button>
       
       <div class="volume-control">
@@ -181,15 +191,20 @@
       </div>
       
       <div class="time-adjust">
-        <button onclick="adjustTime(-10)">-10초</button>
-        <button onclick="adjustTime(10)">+10초</button>
-        <button onclick="adjustTime(60)">+1분</button>
+        <span class="sec-group" style="display:flex; gap:8px;">
+          <button onclick="adjustTime(-10, 'sec')">-10초</button>
+          <button onclick="adjustTime(10, 'sec')">+10초</button>
+          <button onclick="adjustTime(30, 'sec')">+30초</button>
+        </span>
+        <button onclick="adjustTime(-1, 'min')">-1분</button>
+        <button onclick="adjustTime(5, 'min')">+5분</button>
+        <button onclick="adjustTime(10, 'min')">+10분</button>
       </div>
 
       <div class="bgm-control" id="bgmControl">
         <label>
           <input type="checkbox" id="bgmToggle"> 
-          🎵 휴식용 클래식 명곡 켜기
+          🎻 클래식 음악 켜기
         </label>
         <button class="btn-preview" id="previewBtn" onclick="testBGM()">미리듣기</button>
       </div>
@@ -245,12 +260,10 @@
         <option value="취미">개인/취미</option>
         <option value="휴식">휴식/수면</option>
       </select>
-      
       <div class="time-input-wrap">
-        <input type="number" id="timeInputMin" min="0" max="300" value="25" placeholder="0"><span>분</span>
-        <input type="number" id="timeInputSec" min="0" max="59" value="0" placeholder="0"><span>초</span>
+        <input type="number" id="timeInput" min="1" max="300" value="25" placeholder="25">
+        <span>분</span>
       </div>
-      
       <button class="btn-add" onclick="addTask()">+ 등록하기</button>
     </div>
     
@@ -275,38 +288,278 @@
   let isVibeOn = true;
   let isWakeLockEnabled = true; 
   let wakeLockObj = null; 
-  let isAudioUnlocked = false; 
   
   let alarmVolume = 1.0;
   let previousVolume = 100;
-  
-  // 🌟 심신 안정에 좋은 오픈소스 클래식 음악 (쇼팽, 드뷔시, 에릭사티)
-  const bgmUrls = [
-    'https://ia800501.us.archive.org/28/items/ChopinNocturneInEFlatMajorOp.9No.2/ChopinNocturneInEFlatMajorOp.9No.2.mp3', // 쇼팽 녹턴
-    'https://ia802306.us.archive.org/16/items/clair-de-lune-debussy/Clair%20de%20lune%20-%20Debussy.mp3', // 드뷔시 달빛
-    'https://ia800204.us.archive.org/11/items/GymnopedieNo.1/GymnopedieNo.1.mp3' // 에릭 사티 짐노페디
+
+  // ===== 소리 엔진 =====
+  // 이전 버전은 archive.org에 직접 링크된 mp3 파일을 재생했는데,
+  // 그 파일들이 삭제/이동되어 404가 떠서 알람과 배경음악이 전혀 나오지 않았습니다.
+  //
+  // "정말 쉴 때 들을만한 클래식"을 인터넷에서 가져오기 위해, 이번에는
+  // YouTube IFrame Player API로 실제 클래식 연주 영상(화면은 숨기고 소리만 재생)을
+  // 스트리밍합니다. mp3 파일 하나를 직접 링크하는 것보다 훨씬 안정적입니다:
+  // 구글이 운영하는 인프라라 파일이 갑자기 삭제될 위험이 거의 없고, 실제
+  // 관현악단/피아니스트가 연주한 정식 클래식 음원을 들을 수 있습니다.
+  //
+  // 혹시 유튜브 로딩이 실패하는 환경(네트워크 차단 등)이라면:
+  //  1) classicalTracks 배열에 본인 저장소에 직접 올린 mp3 경로가 있으면 그걸 재생하고
+  //  2) 그것도 없으면 내장 신디사이저가 바흐 프렐류드를 직접 연주해 대체합니다.
+  // 즉 인터넷이 막혀도 소리가 전혀 안 나오는 상황은 없습니다.
+  const classicalYoutubeIds = [
+    '9PCDPzs234E', // HALIDONMUSIC - Classical Music for Sleeping
+    'ElWSdcg67RY', // HALIDONMUSIC - Peaceful Classical Music (stress relief)
+    'aepIEsxlaXc'  // HALIDONMUSIC - Classical Music for Reading
   ];
+  // 본인 저장소의 audio/ 폴더에 직접 올린 mp3가 있다면 여기에 경로를 추가하세요.
+  // 예: 'audio/classical-1.mp3'
+  const classicalTracks = [];
+
+  let audioCtx = null;
+  let isAudioUnlocked = false;
+  let bgmAudioEl = null;
+  let synthLoopActive = false;
+  let synthLoopTimeout = null;
+  let alarmRepeatInterval = null;
+
+  let ytPlayer = null;
+  let ytApiLoadAttempted = false;
+  let ytApiReady = false;
+  let ytApiFailed = false;
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
 
   function unlockAudio() {
     if (isAudioUnlocked) return;
-    const alarmPlayer = document.getElementById('alarmPlayer');
-    alarmPlayer.volume = 0; 
-    let p = alarmPlayer.play();
-    if(p !== undefined) {
-      p.then(() => {
-          alarmPlayer.pause();
-          alarmPlayer.currentTime = 0;
-          alarmPlayer.volume = alarmVolume; 
-      }).catch(() => {});
+    try {
+      getAudioContext();
+      isAudioUnlocked = true;
+    } catch (e) {
+      console.warn('오디오 초기화 실패:', e);
     }
-    
-    isAudioUnlocked = true;
+    loadYoutubeApi();
     document.removeEventListener('click', unlockAudio);
     document.removeEventListener('touchstart', unlockAudio);
   }
 
   document.addEventListener('click', unlockAudio, { once: true });
   document.addEventListener('touchstart', unlockAudio, { once: true });
+
+  // YouTube IFrame API를 미리 로드해둠 (실제로 재생 버튼을 누를 때는 이미 준비돼 있도록)
+  function loadYoutubeApi() {
+    if (ytApiLoadAttempted) return;
+    ytApiLoadAttempted = true;
+    try {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.onerror = () => { ytApiFailed = true; };
+      document.head.appendChild(tag);
+    } catch (e) {
+      ytApiFailed = true;
+    }
+  }
+
+  window.onYouTubeIframeAPIReady = function () {
+    try {
+      ytPlayer = new YT.Player('ytPlayerContainer', {
+        height: '0',
+        width: '0',
+        playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1 },
+        events: {
+          'onReady': () => { ytApiReady = true; },
+          'onError': () => { startFallbackBGM(); }
+        }
+      });
+    } catch (e) {
+      ytApiFailed = true;
+    }
+  };
+
+  // 알람: 짧은 비프음 6타를 한 번 울림 (아래 alarm 모달에서 반복 호출)
+  function playAlarmSound() {
+    if (alarmVolume <= 0) return;
+    const ctx = getAudioContext();
+    const beepTimes = [0, 0.5, 1.0, 1.5, 2.0, 2.5];
+    beepTimes.forEach(t => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      const startTime = ctx.currentTime + t;
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.35, 0.0002), startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.4);
+    });
+  }
+
+  // 알람이 "종료" 버튼을 누를 때까지 계속 울리도록 모달을 띄우고 반복 재생
+  function showAlarmModal() {
+    document.getElementById('alarmModal').classList.add('show');
+    playAlarmSound();
+    if (isVibeOn && "vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
+    alarmRepeatInterval = setInterval(() => {
+      playAlarmSound();
+      if (isVibeOn && "vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
+    }, 3000);
+  }
+
+  function stopAlarm() {
+    if (alarmRepeatInterval) {
+      clearInterval(alarmRepeatInterval);
+      alarmRepeatInterval = null;
+    }
+    document.getElementById('alarmModal').classList.remove('show');
+  }
+
+  // 바흐 프렐류드 1번(다장조, BWV 846) 앞부분 아르페지오를 직접 연주 (최후의 대체 수단)
+  const noteFreq = {
+    'G3': 196.00, 'B3': 246.94, 'D4': 293.66, 'F4': 349.23, 'A4': 440.00,
+    'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 'C5': 523.25, 'E5': 659.25,
+    'F5': 698.46, 'D5': 587.33
+  };
+  const preludeMeasures = [
+    ['C4', 'E4', 'G4', 'C5', 'E5', 'G4', 'C5', 'E5'],
+    ['D4', 'F4', 'A4', 'D5', 'F5', 'A4', 'D5', 'F5'],
+    ['G3', 'B3', 'D4', 'G4', 'D4', 'G4', 'B3', 'D4'],
+    ['C4', 'E4', 'G4', 'C5', 'E5', 'G4', 'C5', 'E5']
+  ];
+
+  function playSynthNote(freq, startTime, duration) {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.14, 0.0002), startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+
+  function scheduleSynthLoop() {
+    if (!synthLoopActive) return;
+    const ctx = getAudioContext();
+    const noteDur = 0.32;
+    let t = ctx.currentTime + 0.05;
+    preludeMeasures.forEach(measure => {
+      measure.forEach(noteName => {
+        playSynthNote(noteFreq[noteName] || noteFreq['C4'], t, noteDur * 1.1);
+        t += noteDur;
+      });
+    });
+    const totalMs = (t - ctx.currentTime) * 1000;
+    synthLoopTimeout = setTimeout(scheduleSynthLoop, totalMs);
+  }
+
+  function startSynthClassical() {
+    if (synthLoopActive) return;
+    synthLoopActive = true;
+    scheduleSynthLoop();
+  }
+
+  function stopSynthClassical() {
+    synthLoopActive = false;
+    if (synthLoopTimeout) {
+      clearTimeout(synthLoopTimeout);
+      synthLoopTimeout = null;
+    }
+  }
+
+  // 로컬 mp3(있는 경우) 또는 신디사이저로 대체 재생
+  function startFallbackBGM() {
+    if (classicalTracks.length > 0) {
+      bgmAudioEl = document.getElementById('bgmAudioPlayer');
+      const track = classicalTracks[Math.floor(Math.random() * classicalTracks.length)];
+      bgmAudioEl.loop = true;
+      bgmAudioEl.volume = alarmVolume * 0.5;
+      bgmAudioEl.onerror = () => { startSynthClassical(); };
+      bgmAudioEl.src = track;
+      const playPromise = bgmAudioEl.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => { startSynthClassical(); });
+      }
+    } else {
+      startSynthClassical();
+    }
+  }
+
+  function startBGM() {
+    stopBGM();
+    if (ytApiFailed) {
+      startFallbackBGM();
+      return;
+    }
+    loadYoutubeApi();
+    if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+      const videoId = classicalYoutubeIds[Math.floor(Math.random() * classicalYoutubeIds.length)];
+      try {
+        ytPlayer.setVolume(Math.round(alarmVolume * 60));
+        ytPlayer.loadVideoById(videoId);
+      } catch (e) {
+        startFallbackBGM();
+      }
+    } else {
+      // 유튜브 API가 아직 준비 중이면 잠시 기다렸다가 다시 시도, 그래도 안 되면 대체 재생
+      setTimeout(() => {
+        if (!isRunning) return; // 그 사이 정지했으면 재생하지 않음
+        if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+          startBGM();
+        } else {
+          startFallbackBGM();
+        }
+      }, 1500);
+    }
+  }
+
+  function stopBGM() {
+    if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+      try { ytPlayer.pauseVideo(); } catch (e) {}
+    }
+    if (bgmAudioEl) {
+      bgmAudioEl.pause();
+      bgmAudioEl.onerror = null;
+      bgmAudioEl.removeAttribute('src');
+    }
+    stopSynthClassical();
+  }
+
+  function isBgmPlaying() {
+    const ytPlaying = ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === 1;
+    const localPlaying = bgmAudioEl && !bgmAudioEl.paused;
+    return !!ytPlaying || !!localPlaying || synthLoopActive;
+  }
+
+  function testBGM() {
+    unlockAudio();
+    const btn = document.getElementById('previewBtn');
+    if (isBgmPlaying()) {
+      stopBGM();
+      btn.innerText = "미리듣기";
+      return;
+    }
+    startBGM();
+    btn.innerText = "정지하기";
+    setTimeout(() => {
+      if (isBgmPlaying()) {
+        stopBGM();
+        btn.innerText = "미리듣기";
+      }
+    }, 8000);
+  }
+  // ===== 소리 엔진 끝 =====
 
   const quotes = [
     "배움의 고통은 잠시지만, 배우지 못한 고통은 평생이다.",
@@ -318,11 +571,11 @@
   ];
 
   const recommendations = [
-    { title: "수학 고난도 3문제 꼼꼼히 풀기", min: 45, sec: 0 },
-    { title: "인터넷 강의 복습 및 핵심 개념 백지복습", min: 45, sec: 0 },
-    { title: "영어 단어 30개 집중 암기 테스트", min: 25, sec: 0 },
-    { title: "스마트폰 멀리 두고 눈 감고 명상하기", min: 15, sec: 0 },
-    { title: "하루를 돌아보며 플래너 피드백 작성", min: 10, sec: 0 }
+    { title: "수학 고난도 3문제 꼼꼼히 풀기", time: "45" },
+    { title: "인터넷 강의 복습 및 핵심 개념 백지복습", time: "45" },
+    { title: "영어 단어 30개 집중 암기 테스트", time: "25" },
+    { title: "스마트폰 멀리 두고 눈 감고 명상하기", time: "15" },
+    { title: "하루를 돌아보며 플래너 피드백 작성", time: "10" }
   ];
 
   window.onload = function() {
@@ -344,13 +597,16 @@
     }
     
     let csvContent = "\uFEFF"; 
-    csvContent += "등록일자,카테고리,학습 내용,목표 시간(초),진행 시간(초),달성 상태\n";
+    csvContent += "등록일자,카테고리,학습 내용,목표 시간(분),진행 시간(분),달성 상태\n";
     
     tasks.forEach(t => {
       const date = new Date(parseInt(t.id)).toLocaleString('ko-KR');
+      const target = Math.floor(t.targetTime / 60);
+      const recorded = Math.floor(t.recordedTime / 60);
       const status = t.isCompleted ? "완료" : "미완료";
+      
       const title = `"${t.title.replace(/"/g, '""')}"`;
-      csvContent += `${date},${t.category},${title},${t.targetTime},${t.recordedTime},${status}\n`;
+      csvContent += `${date},${t.category},${title},${target},${recorded},${status}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -404,12 +660,11 @@
       icon.innerText = '🔊';
     }
     
-    const alarmPlayer = document.getElementById('alarmPlayer');
-    if(alarmPlayer) alarmPlayer.volume = alarmVolume;
-    
-    const bgmPlayer = document.getElementById('bgmPlayer');
-    if (bgmPlayer) {
-      bgmPlayer.volume = alarmVolume * 0.5;
+    if (bgmAudioEl) {
+      bgmAudioEl.volume = alarmVolume * 0.5;
+    }
+    if (ytPlayer && typeof ytPlayer.setVolume === 'function') {
+      try { ytPlayer.setVolume(Math.round(alarmVolume * 60)); } catch (e) {}
     }
   }
 
@@ -436,20 +691,17 @@
     if (!title) return alert("학습 내용을 입력해주세요.");
     
     const category = document.getElementById('categoryInput').value;
+    const targetMin = parseInt(document.getElementById('timeInput').value);
     
-    const minVal = parseInt(document.getElementById('timeInputMin').value) || 0;
-    const secVal = parseInt(document.getElementById('timeInputSec').value) || 0;
-    const targetSec = (minVal * 60) + secVal;
-    
-    if (targetSec < 1) {
-      return alert("학습 시간은 1초 이상으로 설정해주세요.");
+    if (isNaN(targetMin) || targetMin < 1) {
+      return alert("학습 시간은 1분 이상으로 입력해주세요.");
     }
     
     const newTask = {
       id: Date.now().toString(),
       title: title,
       category: category,
-      targetTime: targetSec,
+      targetTime: targetMin * 60,
       recordedTime: 0,
       isCompleted: false
     };
@@ -496,14 +748,8 @@
     
     tasks.forEach(task => {
       const progressPercent = Math.min(100, Math.round((task.recordedTime / task.targetTime) * 100));
-      
       const recordMin = Math.floor(task.recordedTime / 60);
-      const recordSec = task.recordedTime % 60;
-      const recordText = recordSec > 0 ? `${recordMin}분 ${recordSec}초` : `${recordMin}분`;
-      
       const targetMin = Math.floor(task.targetTime / 60);
-      const targetSec = task.targetTime % 60;
-      const targetText = targetSec > 0 ? `${targetMin}분 ${targetSec}초` : `${targetMin}분`;
       
       const li = document.createElement('li');
       li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
@@ -518,7 +764,7 @@
             <div>
               <span class="badge bg-${task.category}">${task.category}</span>
               <div class="task-title-text">${task.title}</div>
-              <div class="task-meta">진행: <b>${recordText}</b> / 목표: ${targetText}</div>
+              <div class="task-meta">진행: <b>${recordMin}분</b> / 목표: ${targetMin}분</div>
             </div>
           </div>
           <div class="task-actions">
@@ -543,10 +789,7 @@
     
     selector.innerHTML = '<option value="">학습 대상을 선택해주세요 (단순 타이머)</option>';
     tasks.filter(t => !t.isCompleted).forEach(task => {
-      const targetMin = Math.floor(task.targetTime / 60);
-      const targetSec = task.targetTime % 60;
-      const targetText = targetSec > 0 ? `${targetMin}분 ${targetSec}초` : `${targetMin}분`;
-      selector.innerHTML += `<option value="${task.id}">${task.title} (${targetText})</option>`;
+      selector.innerHTML += `<option value="${task.id}">${task.title} (${Math.floor(task.targetTime/60)}분)</option>`;
     });
     if(tasks.find(t => t.id === currentVal && !t.isCompleted)) { selector.value = currentVal; }
   }
@@ -607,9 +850,6 @@
   }
 
   function syncTimerWithTask() {
-    // 🌟 알람이 울리고 있는 상태라면 다른 작업을 하기 전 알람 먼저 중지
-    stopAlarmIfRinging();
-
     const selector = document.getElementById('timerTaskSelector');
     const bgmControl = document.getElementById('bgmControl');
     activeTaskId = selector.value;
@@ -636,9 +876,11 @@
     renderTasks();
   }
 
-  function adjustTime(seconds) {
+  // 시간 조절: unit이 'sec'이면 초 단위로, 'min'이면 분 단위로 조절
+  function adjustTime(amount, unit = 'min') {
     if (isRunning) return;
-    timeLeft += seconds;
+    const deltaSeconds = unit === 'sec' ? amount : amount * 60;
+    timeLeft += deltaSeconds;
     if (timeLeft < 0) timeLeft = 0;
     updateTimerDisplay();
   }
@@ -649,56 +891,7 @@
     document.getElementById('timeDisplay').innerText = `${m}:${s}`;
   }
 
-  function testBGM() {
-    unlockAudio();
-    const btn = document.getElementById('previewBtn');
-    const player = document.getElementById('bgmPlayer');
-    
-    if (!player.paused && (btn.innerText === "정지하기" || btn.innerText === "재시도")) {
-      player.pause();
-      btn.innerText = "미리듣기";
-      return;
-    }
-
-    if (!player.src || player.src === "") {
-      const randomUrl = bgmUrls[Math.floor(Math.random() * bgmUrls.length)];
-      player.src = randomUrl;
-      player.load();
-    }
-    
-    player.volume = alarmVolume * 0.5; 
-    
-    let playPromise = player.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        btn.innerText = "정지하기";
-        setTimeout(() => {
-          if(!player.paused) {
-            player.pause();
-            btn.innerText = "미리듣기";
-          }
-        }, 5000);
-      }).catch(e => {
-        console.warn("BGM Play Error:", e);
-        btn.innerText = "다시 시도";
-      });
-    }
-  }
-
-  function stopBGM() {
-    const player = document.getElementById('bgmPlayer');
-    if (player && !player.paused) {
-      player.pause();
-    }
-  }
-
   function toggleTimer() {
-    // 알람이 울리는 중이면 먼저 끄기 처리
-    const startBtn = document.getElementById('startBtn');
-    if (startBtn.classList.contains('alarm-ringing')) {
-        turnOffAlarm();
-        return;
-    }
     if (isRunning) { pauseTimer(); } else { startTimer(); }
   }
 
@@ -713,10 +906,9 @@
     document.body.classList.add('deep-focus');
     requestWakeLock(); 
     
-    const player = document.getElementById('bgmPlayer');
     const btnPreview = document.getElementById('previewBtn');
-    if (btnPreview.innerText === "정지하기" || btnPreview.innerText === "다시 시도") {
-      player.pause();
+    if (btnPreview.innerText === "정지하기") {
+      stopBGM();
       btnPreview.innerText = "미리듣기";
     }
 
@@ -724,17 +916,7 @@
     const bgmToggle = document.getElementById('bgmToggle');
     
     if (bgmControl.style.display === 'flex' && bgmToggle.checked) {
-      if (!player.src || player.src === "") {
-        const randomUrl = bgmUrls[Math.floor(Math.random() * bgmUrls.length)];
-        player.src = randomUrl;
-        player.load();
-      }
-      player.volume = alarmVolume * 0.5;
-      
-      let playPromise = player.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(e => console.warn("BGM Error:", e));
-      }
+      startBGM();
     }
 
     timerInterval = setInterval(() => {
@@ -742,9 +924,9 @@
         timeLeft--;
         updateTimerDisplay();
         
-        if (activeTaskId) {
+        if (activeTaskId && timeLeft % 60 === 0) {
           const task = tasks.find(t => t.id === activeTaskId);
-          if (task) { task.recordedTime += 1; saveData(); updateStats(); }
+          if (task) { task.recordedTime += 60; saveData(); updateStats(); renderTasks(); }
         }
       } else {
         handleTimerEnd();
@@ -766,79 +948,19 @@
   }
 
   function resetTimer() {
-    stopAlarmIfRinging();
     pauseTimer();
     stopBGM();
     syncTimerWithTask();
   }
 
-  // 🌟 종료 시 무한 반복 알람 로직
   function handleTimerEnd() {
     pauseTimer(); 
     stopBGM(); 
-    
-    if (alarmVolume > 0) { 
-      const alarmPlayer = document.getElementById('alarmPlayer');
-      alarmPlayer.volume = alarmVolume;
-      alarmPlayer.currentTime = 0;
-      alarmPlayer.loop = true; // 무한 반복 설정
-      
-      let playPromise = alarmPlayer.play();
-      if (playPromise !== undefined) {
-         playPromise.catch(e => console.warn("Alarm Play Error:", e));
-      }
-      
-      // 알람 끄기 UI 상태로 전환
-      const startBtn = document.getElementById('startBtn');
-      startBtn.innerText = '🛑 알람 끄기';
-      startBtn.classList.add('alarm-ringing');
-      
-      document.getElementById('timerStatus').innerText = `🔔 시간이 다 되었습니다!`;
-      document.getElementById('timerCircle').classList.add('alarm-ringing-circle');
-    } else {
-      alert("시간이 종료되었습니다! 수고하셨습니다.");
-    }
-    
-    if (isVibeOn && "vibrate" in navigator) { 
-       navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]); 
-    }
-  }
-
-  // 🌟 알람 수동 종료 함수
-  function turnOffAlarm() {
-    const alarmPlayer = document.getElementById('alarmPlayer');
-    alarmPlayer.pause();
-    alarmPlayer.currentTime = 0;
-    alarmPlayer.loop = false;
-    
-    const startBtn = document.getElementById('startBtn');
-    startBtn.innerText = '▶ 집중 시작';
-    startBtn.classList.remove('alarm-ringing');
-    
-    document.getElementById('timerCircle').classList.remove('alarm-ringing-circle');
-    
-    alert("수고하셨습니다! 학습 기록이 저장되었습니다.");
-    syncTimerWithTask(); // 화면 복귀
-  }
-
-  // 알람이 울리고 있을 때 다른 버튼(초기화, 완료 등)을 누르면 먼저 알람을 끄는 보조 함수
-  function stopAlarmIfRinging() {
-    const startBtn = document.getElementById('startBtn');
-    if (startBtn.classList.contains('alarm-ringing')) {
-        const alarmPlayer = document.getElementById('alarmPlayer');
-        alarmPlayer.pause();
-        alarmPlayer.currentTime = 0;
-        alarmPlayer.loop = false;
-        
-        startBtn.innerText = '▶ 집중 시작';
-        startBtn.classList.remove('alarm-ringing');
-        document.getElementById('timerCircle').classList.remove('alarm-ringing-circle');
-    }
+    showAlarmModal();
   }
 
   function completeCurrentSession() {
     if (!activeTaskId) return alert("연결된 학습 내역이 없습니다.");
-    stopAlarmIfRinging(); // 알람 울리는 중이면 알람 먼저 끄기
     pauseTimer();
     toggleTaskComplete(activeTaskId);
     activeTaskId = null;
@@ -848,7 +970,6 @@
 
   function resetAllData() {
     if(confirm("모든 학습 데이터가 지워집니다. 계속하시겠습니까?")) {
-      stopAlarmIfRinging();
       pauseTimer();
       tasks = [];
       saveData();
@@ -868,8 +989,7 @@
       const randomRec = recommendations[Math.floor(Math.random() * recommendations.length)];
       
       document.getElementById('taskInput').value = randomRec.title;
-      document.getElementById('timeInputMin').value = randomRec.min;
-      document.getElementById('timeInputSec').value = randomRec.sec;
+      document.getElementById('timeInput').value = randomRec.time;
       document.getElementById('categoryInput').value = "자습";
       
       const inputEl = document.getElementById('taskInput');
