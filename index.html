@@ -325,8 +325,6 @@
   let audioCtx = null;
   let isAudioUnlocked = false;
   let bgmAudioEl = null;
-  let bgmSourceNode = null;
-  let bgmGainNode = null;
   let synthLoopActive = false;
   let synthLoopTimeout = null;
   let alarmRepeatInterval = null;
@@ -586,22 +584,12 @@
   // ---- 자연의 소리 끝 ----
 
   // 재생 우선순위(클래식 선택 시): 위키미디어 실제 클래식 녹음 -> 본인 저장소 mp3 -> 내장 신디사이저
-  // <audio>의 .volume은 최대 1.0까지만 지원해서, 그 이상으로 "더 크게"는
-  // Web Audio Gain 노드로 실제 증폭을 해야 합니다. MediaElementSource는 같은
-  // <audio> 엘리먼트에 대해 딱 한 번만 만들 수 있어서 최초 1회만 연결합니다.
-  function setupBgmAudioGraph() {
-    if (bgmSourceNode) return;
-    try {
-      const ctx = getAudioContext();
-      bgmSourceNode = ctx.createMediaElementSource(bgmAudioEl);
-      bgmGainNode = ctx.createGain();
-      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
-      bgmSourceNode.connect(bgmGainNode).connect(getMasterOutput(ctx));
-    } catch (e) {
-      console.warn('오디오 증폭 그래프 설정 실패:', e);
-    }
-  }
-
+  // 참고: <audio>의 볼륨은 브라우저 스펙상 최대 1.0(100%)을 넘을 수 없습니다.
+  // Web Audio Gain 노드로 외부 스트리밍 오디오를 1.0 이상으로 증폭해보려 했지만,
+  // 브라우저 환경에 따라 오히려 소리가 아예 안 나오는 문제가 있어 원래 방식으로
+  // 되돌렸습니다. 스트리밍 음악을 진짜로 더 크게 하고 싶으시면, 이미 크게(라우드니스
+  // 노멀라이즈) 마스터링된 mp3를 본인 저장소의 audio/ 폴더에 올려 classicalTracks에
+  // 등록하는 방법을 추천합니다 (그 경우엔 100% 볼륨 자체가 더 크게 들립니다).
   function startBGM() {
     stopBGM();
     const type = document.getElementById('bgmTypeSelect') ? document.getElementById('bgmTypeSelect').value : 'classical';
@@ -617,11 +605,7 @@
     }
     const track = combined[Math.floor(Math.random() * combined.length)];
     bgmAudioEl.loop = true;
-    bgmAudioEl.volume = 1; // 실제 볼륨은 아래 Gain 노드로 제어 (1.0 이상으로 증폭 가능)
-    setupBgmAudioGraph();
-    if (bgmGainNode) {
-      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
-    }
+    bgmAudioEl.volume = alarmVolume; // 브라우저가 허용하는 범위 내에서 볼륨 슬라이더에 맞춤
     bgmAudioEl.onerror = () => { startSynthClassical(); };
     bgmAudioEl.src = track;
     const playPromise = bgmAudioEl.play();
@@ -763,8 +747,8 @@
       icon.innerText = '🔊';
     }
     
-    if (bgmGainNode) {
-      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
+    if (bgmAudioEl) {
+      bgmAudioEl.volume = alarmVolume;
     }
     if (natureGain) {
       natureGain.gain.value = alarmVolume * natureBaseGain;
