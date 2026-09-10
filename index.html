@@ -325,6 +325,8 @@
   let audioCtx = null;
   let isAudioUnlocked = false;
   let bgmAudioEl = null;
+  let bgmSourceNode = null;
+  let bgmGainNode = null;
   let synthLoopActive = false;
   let synthLoopTimeout = null;
   let alarmRepeatInterval = null;
@@ -337,6 +339,22 @@
       audioCtx.resume();
     }
     return audioCtx;
+  }
+
+  // 볼륨을 크게 올려도 소리가 심하게 찌그러지지 않도록, 모든 소리를 이 리미터를
+  // 거쳐서 최종 출력합니다.
+  let masterLimiter = null;
+  function getMasterOutput(ctx) {
+    if (!masterLimiter) {
+      masterLimiter = ctx.createDynamicsCompressor();
+      masterLimiter.threshold.value = -10;
+      masterLimiter.knee.value = 20;
+      masterLimiter.ratio.value = 6;
+      masterLimiter.attack.value = 0.003;
+      masterLimiter.release.value = 0.25;
+      masterLimiter.connect(ctx.destination);
+    }
+    return masterLimiter;
   }
 
   function unlockAudio() {
@@ -364,7 +382,7 @@
     fundGain.gain.setValueAtTime(0.0001, startTime);
     fundGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * volumeScale, 0.0002), startTime + 0.06);
     fundGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.4);
-    fundamental.connect(fundGain).connect(ctx.destination);
+    fundamental.connect(fundGain).connect(getMasterOutput(ctx));
     fundamental.start(startTime);
     fundamental.stop(startTime + 1.5);
 
@@ -375,7 +393,7 @@
     overGain.gain.setValueAtTime(0.0001, startTime);
     overGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * volumeScale * 0.25, 0.0001), startTime + 0.06);
     overGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.8);
-    overtone.connect(overGain).connect(ctx.destination);
+    overtone.connect(overGain).connect(getMasterOutput(ctx));
     overtone.start(startTime);
     overtone.stop(startTime + 0.9);
   }
@@ -398,7 +416,7 @@
     alarmRepeatInterval = setInterval(() => {
       playAlarmSound();
       if (isVibeOn && "vibrate" in navigator) navigator.vibrate([600, 300, 600]);
-    }, 3500);
+    }, 2200);
   }
 
   function stopAlarm() {
@@ -431,7 +449,7 @@
     gain.gain.setValueAtTime(0.0001, startTime);
     gain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.14, 0.0002), startTime + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(getMasterOutput(ctx));
     osc.start(startTime);
     osc.stop(startTime + duration + 0.05);
   }
@@ -512,9 +530,9 @@
     osc.type = 'triangle';
     osc.frequency.value = 1200 + Math.random() * 900;
     dropGain.gain.setValueAtTime(0.0001, startTime);
-    dropGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.07, 0.0002), startTime + 0.005);
+    dropGain.gain.exponentialRampToValueAtTime(Math.max(alarmVolume * 0.1, 0.0002), startTime + 0.005);
     dropGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.09);
-    osc.connect(dropGain).connect(ctx.destination);
+    osc.connect(dropGain).connect(getMasterOutput(ctx));
     osc.start(startTime);
     osc.stop(startTime + 0.1);
     const nextDelay = 70 + Math.random() * 230;
@@ -531,11 +549,11 @@
     natureFilter.type = 'bandpass';
     natureFilter.frequency.value = 1800;
     natureFilter.Q.value = 0.6;
-    natureBaseGain = 0.25;
+    natureBaseGain = 0.8;
     natureBaseLfoGain = 0;
     natureGain = ctx.createGain();
     natureGain.gain.value = alarmVolume * natureBaseGain;
-    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(ctx.destination);
+    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(getMasterOutput(ctx));
     natureNoiseSource.start();
     scheduleRainDroplets(ctx);
   }
@@ -551,8 +569,8 @@
     natureFilter = ctx.createBiquadFilter();
     natureFilter.type = 'lowpass';
     natureFilter.frequency.value = 650;
-    natureBaseGain = 0.3;
-    natureBaseLfoGain = 0.18;
+    natureBaseGain = 0.9;
+    natureBaseLfoGain = 0.5;
     natureGain = ctx.createGain();
     natureGain.gain.value = alarmVolume * natureBaseGain;
     natureLfo = ctx.createOscillator();
@@ -561,13 +579,29 @@
     natureLfoGain.gain.value = alarmVolume * natureBaseLfoGain;
     natureLfo.connect(natureLfoGain);
     natureLfoGain.connect(natureGain.gain);
-    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(ctx.destination);
+    natureNoiseSource.connect(natureFilter).connect(natureGain).connect(getMasterOutput(ctx));
     natureLfo.start();
     natureNoiseSource.start();
   }
   // ---- 자연의 소리 끝 ----
 
   // 재생 우선순위(클래식 선택 시): 위키미디어 실제 클래식 녹음 -> 본인 저장소 mp3 -> 내장 신디사이저
+  // <audio>의 .volume은 최대 1.0까지만 지원해서, 그 이상으로 "더 크게"는
+  // Web Audio Gain 노드로 실제 증폭을 해야 합니다. MediaElementSource는 같은
+  // <audio> 엘리먼트에 대해 딱 한 번만 만들 수 있어서 최초 1회만 연결합니다.
+  function setupBgmAudioGraph() {
+    if (bgmSourceNode) return;
+    try {
+      const ctx = getAudioContext();
+      bgmSourceNode = ctx.createMediaElementSource(bgmAudioEl);
+      bgmGainNode = ctx.createGain();
+      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
+      bgmSourceNode.connect(bgmGainNode).connect(getMasterOutput(ctx));
+    } catch (e) {
+      console.warn('오디오 증폭 그래프 설정 실패:', e);
+    }
+  }
+
   function startBGM() {
     stopBGM();
     const type = document.getElementById('bgmTypeSelect') ? document.getElementById('bgmTypeSelect').value : 'classical';
@@ -583,7 +617,11 @@
     }
     const track = combined[Math.floor(Math.random() * combined.length)];
     bgmAudioEl.loop = true;
-    bgmAudioEl.volume = alarmVolume * 0.5;
+    bgmAudioEl.volume = 1; // 실제 볼륨은 아래 Gain 노드로 제어 (1.0 이상으로 증폭 가능)
+    setupBgmAudioGraph();
+    if (bgmGainNode) {
+      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
+    }
     bgmAudioEl.onerror = () => { startSynthClassical(); };
     bgmAudioEl.src = track;
     const playPromise = bgmAudioEl.play();
@@ -725,8 +763,8 @@
       icon.innerText = '🔊';
     }
     
-    if (bgmAudioEl) {
-      bgmAudioEl.volume = alarmVolume * 0.5;
+    if (bgmGainNode) {
+      bgmGainNode.gain.value = Math.min(alarmVolume * 2, 2.2);
     }
     if (natureGain) {
       natureGain.gain.value = alarmVolume * natureBaseGain;
