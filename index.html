@@ -202,10 +202,10 @@
 
       <div class="bgm-control" id="bgmControl">
         <label>
-          <input type="checkbox" id="bgmToggle"> 
+          <input type="checkbox" id="bgmToggle" onchange="maybePreloadBgm()"> 
           🎧 배경음 켜기
         </label>
-        <select id="bgmTypeSelect" style="margin-left:10px; padding:5px 8px; border-radius:6px; border:1px solid #FDE68A; background:white; color:#92400E; font-weight:bold; font-size:13px;">
+        <select id="bgmTypeSelect" onchange="maybePreloadBgm()" style="margin-left:10px; padding:5px 8px; border-radius:6px; border:1px solid #FDE68A; background:white; color:#92400E; font-weight:bold; font-size:13px;">
           <option value="classical">🎻 클래식 음악</option>
           <option value="rain">🌧️ 빗소리</option>
           <option value="ocean">🌊 파도 소리</option>
@@ -590,6 +590,44 @@
   // 되돌렸습니다. 스트리밍 음악을 진짜로 더 크게 하고 싶으시면, 이미 크게(라우드니스
   // 노멀라이즈) 마스터링된 mp3를 본인 저장소의 audio/ 폴더에 올려 classicalTracks에
   // 등록하는 방법을 추천합니다 (그 경우엔 100% 볼륨 자체가 더 크게 들립니다).
+  let bgmPreloadReady = false;
+
+  // 재생 버튼을 누른 "그 순간" 파일을 새로 받기 시작하면 몇 초씩 지연이 생겨서,
+  // 휴식 모드에서 배경음 체크박스를 켜는 즉시(재생 전에 미리) 파일을 내려받아둡니다.
+  function preloadClassicalTrack() {
+    bgmAudioEl = document.getElementById('bgmAudioPlayer');
+    const combined = classicalStreamUrls.concat(classicalTracks);
+    if (combined.length === 0 || bgmPreloadReady) return;
+    const track = combined[Math.floor(Math.random() * combined.length)];
+    bgmAudioEl.loop = true;
+    bgmAudioEl.volume = alarmVolume;
+    bgmAudioEl.preload = 'auto';
+    bgmAudioEl.src = track;
+    bgmAudioEl.load();
+    bgmPreloadReady = true;
+  }
+
+  function clearBgmPreload() {
+    bgmPreloadReady = false;
+    if (bgmAudioEl) {
+      bgmAudioEl.pause();
+      bgmAudioEl.removeAttribute('src');
+      bgmAudioEl.load();
+    }
+  }
+
+  function maybePreloadBgm() {
+    const bgmControl = document.getElementById('bgmControl');
+    const bgmToggle = document.getElementById('bgmToggle');
+    const bgmTypeSelect = document.getElementById('bgmTypeSelect');
+    if (!bgmControl || bgmControl.style.display !== 'flex' || !bgmToggle.checked || bgmTypeSelect.value !== 'classical') {
+      clearBgmPreload();
+      return;
+    }
+    unlockAudio();
+    preloadClassicalTrack();
+  }
+
   function startBGM() {
     stopBGM();
     const type = document.getElementById('bgmTypeSelect') ? document.getElementById('bgmTypeSelect').value : 'classical';
@@ -603,11 +641,11 @@
       startSynthClassical();
       return;
     }
-    const track = combined[Math.floor(Math.random() * combined.length)];
-    bgmAudioEl.loop = true;
-    bgmAudioEl.volume = alarmVolume; // 브라우저가 허용하는 범위 내에서 볼륨 슬라이더에 맞춤
+    if (!bgmPreloadReady) {
+      preloadClassicalTrack();
+    }
+    bgmAudioEl.volume = alarmVolume;
     bgmAudioEl.onerror = () => { startSynthClassical(); };
-    bgmAudioEl.src = track;
     const playPromise = bgmAudioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => { startSynthClassical(); });
@@ -616,9 +654,7 @@
 
   function stopBGM() {
     if (bgmAudioEl) {
-      bgmAudioEl.pause();
-      bgmAudioEl.onerror = null;
-      bgmAudioEl.removeAttribute('src');
+      bgmAudioEl.pause(); // src는 그대로 둬서 다시 재생할 때 다시 받지 않고 바로 이어서 재생
     }
     stopSynthClassical();
     stopNatureSound();
@@ -968,6 +1004,7 @@
         const bgmToggleEl = document.getElementById('bgmToggle');
         if (bgmToggleEl.checked) { bgmToggleEl.checked = false; }
         stopBGM();
+        clearBgmPreload();
       }
     } else {
       timeLeft = 25 * 60;
@@ -976,6 +1013,7 @@
       const bgmToggleEl = document.getElementById('bgmToggle');
       if (bgmToggleEl.checked) { bgmToggleEl.checked = false; }
       stopBGM();
+      clearBgmPreload();
     }
     
     if(!isRunning) updateTimerDisplay();
